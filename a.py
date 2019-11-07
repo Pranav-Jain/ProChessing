@@ -236,7 +236,7 @@ def make_lines(h_lines, v_lines, cdst):
 
 if __name__ == '__main__':
 
-  image_name = "ch3.jpg"
+  image_name = "chess_1.jfif"
   img = cv2.imread(image_name)
   # img = unsharp_mask(img, radius=5, amount)
 
@@ -355,6 +355,7 @@ if __name__ == '__main__':
   v_lines_final.append(square[2])
   # v_lines_final.append(v_lines[square[0]+1])
 
+  threshold = square[-1]*0.25
   counter = 0
   for j in range(X.shape[0] - square[0] - 1):
     counter += 1
@@ -367,7 +368,7 @@ if __name__ == '__main__':
       if x < m:
         m = x
         index = i
-    if m < 20:  
+    if m < threshold:  
       v_lines_final.append(v_lines[index])
 
   counter = 0
@@ -383,7 +384,7 @@ if __name__ == '__main__':
       if x < m:
         m = x
         index = i
-    if m < 20:
+    if m < threshold:
       v_lines_final.append(v_lines[index])
         
 
@@ -398,7 +399,7 @@ if __name__ == '__main__':
       if x < m:
         m = x
         index = i
-    if m < 20:
+    if m < threshold:
       h_lines_final.append(h_lines[index])
 
   counter = 0
@@ -411,16 +412,93 @@ if __name__ == '__main__':
       if x < m:
         m = x
         index = i
-    if m < 20:
+    if m < threshold:
       h_lines_final.append(h_lines[index])
 
   h_lines_final = np.array(h_lines_final)
   v_lines_final = np.array(v_lines_final)
-  print(v_lines_final)
-  print(h_lines_final)
 
   # edges = cv2.imread("edges.jpg", 0)
+  h_lines = h_lines_final[h_lines_final[:,0].argsort()]
+  v_lines = v_lines_final[v_lines_final[:,0].argsort()]
+
+  if h_lines.shape[0] > 9:
+    h_lines = h_lines[:9]
+
+  print(v_lines)
+  print(h_lines)
+
   make_lines(h_lines_final, v_lines_final, cd2)
+
+  pts = []
+  voting = []
+  for i in range(v_lines.shape[0]):
+    intersections = []
+    v = []
+    for j in range(h_lines.shape[0]):
+      A = np.zeros((2,2))
+      b = np.zeros(2)
+      A[0][0] = np.cos(v_lines[i][1] * np.pi/180)
+      A[0][1] = np.sin(v_lines[i][1] * np.pi/180)
+      A[1][0] = np.cos(h_lines[j][1] * np.pi/180)
+      A[1][1] = np.sin(h_lines[j][1] * np.pi/180)
+
+      b[0] = v_lines[i][2] * v_lines[i][0]
+      b[1] = h_lines[j][2] * h_lines[j][0]
+
+      x = np.linalg.solve(A, b)
+
+      if(i == 0 and j == 0):
+        pts.append(x)
+
+      if(i == 0 and j == h_lines.shape[0] - 1):
+        pts.append(x)
+        # pts.append((abs(x[0]), abs(x[1])))
+
+      if(i == v_lines.shape[0] - 1 and j == h_lines.shape[0] - 1):
+        pts.append(x)
+        # pts.append((abs(x[0]), abs(x[1])))
+
+      if(i == v_lines.shape[0] - 1 and j == 0):
+        pts.append(x)
+        # pts.append((abs(x[0]), abs(x[1])))
+
+  # pts[0], pts[2] = pts[2], pts[0]
+  # pts[3], pts[1] = pts[1], pts[3]
+
+  pts = np.array(pts)
+  # print(pts)
+
+  image = cv2.imread("warped.jpg")
+
+  warped, checkerboard_size = four_point_transform(image, pts)
+  warped = cv2.resize(warped, (checkerboard_size, checkerboard_size))
+  cv2.imwrite("warped.jpg", warped)
+  warped = cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY)
+
+
+  X = []
+
+  for i in range(v_lines.shape[0]):
+    x_temp = []
+    for j in range(h_lines.shape[0]):
+      A = np.zeros((2,2))
+      b = np.zeros(2)
+      A[0][0] = np.cos(v_lines[i][1] * np.pi/180)
+      A[0][1] = np.sin(v_lines[i][1] * np.pi/180)
+      A[1][0] = np.cos(h_lines[j][1] * np.pi/180)
+      A[1][1] = np.sin(h_lines[j][1] * np.pi/180)
+
+      b[0] = v_lines[i][2] * v_lines[i][0]
+      b[1] = h_lines[j][2] * h_lines[j][0]
+
+      x = np.linalg.solve(A, b)
+      x_temp.append(x)
+
+    X.append(x_temp)
+
+  X = np.array(X)
+  print(X)
 
   # #     # print(x)
   #     if int(x[0]) not in intersections:
