@@ -10,7 +10,7 @@ Original file is located at
 import cv2
 import numpy as np
 import math
-# from skimage.filters import unsharp_mask
+from skimage.filters import unsharp_mask
 from PIL import Image, ImageDraw
 from itertools import cycle
 # from google.colab.patches import cv2_imshow
@@ -114,8 +114,8 @@ def get_edges(img):
   std = np.std(img)
   th1 = min(0,meadian - std)
   th2 = max(255,meadian + std)
-  th1 = 100
-  th2 = 300
+  th1 = 80
+  th2 = 160
 
   # th2, thresh_im = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
   # th1 = th2//3
@@ -144,7 +144,7 @@ def get_lines(lines, cdst):
     theta = theta*180/np.pi
     margin =10
     if(theta < 45 -margin or theta > 180 - 45 + margin):
-      if(countV > 19):
+      if(countV > 20):
         continue
 
       if (abs(rho)>3 and abs(rho < img.shape[1] - 3)):
@@ -166,7 +166,7 @@ def get_lines(lines, cdst):
         cv2.line(cdst, pt1, pt2, (0,0,255), 3, cv2.LINE_AA)
     
     elif(theta > 45 + margin and theta < 135 - margin):
-      if(countH > 19):
+      if(countH > 20):
         continue
 
       if (abs(rho)>3 and abs(rho < img.shape[0] - 3)):
@@ -228,16 +228,16 @@ def make_lines(h_lines, v_lines, cdst):
 
   cv2.imwrite("final_lines.jpg",cdst)
 
-def unsharp_mask(image, kernel_size=(5, 5), sigma=1.0):
-  blurred = cv2.GaussianBlur(image, kernel_size, sigma)
-  sharpened = 2.0 * image - 1.0 * blurred
-  return sharpened.astype(np.uint8)
+# def unsharp_mask(image, kernel_size=(5, 5), sigma=1.0):
+#   blurred = cv2.GaussianBlur(image, kernel_size, sigma)
+#   sharpened = 2.0 * image - 1.0 * blurred
+#   return sharpened.astype(np.uint8)
 
 
 if __name__ == '__main__':
 
   image_name = "chess_1.jfif"
-  img = cv2.imread(image_name, 0)
+  img = cv2.imread(image_name)
   # img = unsharp_mask(img, radius=5, amount)
 
   lines, cd1 = get_edges(img)
@@ -296,18 +296,17 @@ if __name__ == '__main__':
   image = cv2.imread(image_name)
 
   warped, checkerboard_size = four_point_transform(image, pts)
-  # warped = unsharp_mask(warped)
   warped = cv2.resize(warped, (checkerboard_size, checkerboard_size))
   cv2.imwrite("warped.jpg", warped)
   warped = cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY)
 
+  # warped = unsharp_mask(warped)
+
   # img = cv2.imread("warped.jpg", 0)
-  # gaussian = cv2.GaussianBlur(img, (3,3), 1.0)
-  # img = cv2.addWeighted(img, 2, gaussian, -1, 0, img)
-  print(h_lines[:5])
+  # gaussian = cv2.GaussianBlur(warped, (3,3), 1.0)
+  # warped = cv2.addWeighted(warped, 2, gaussian, -1, 0, warped)
   lines, cd2 = get_edges(warped)
   h_lines, v_lines = get_lines(lines, np.copy(cd2))
-  print(h_lines[:5])
 
   h_lines = np.array(h_lines)
   v_lines = np.array(v_lines)
@@ -342,12 +341,12 @@ if __name__ == '__main__':
       b = np.linalg.norm(X[i+1][j] - X[i+1][j+1])
       c = np.linalg.norm(X[i][j] - X[i+1][j])
       d = np.linalg.norm(X[i][j+1] - X[i+1][j+1])
-      if abs(a - b) < 1 and abs(c - d) < 1 and abs(a -c) < 1 and abs(b -d) < 1 and a>20:
-        print(a,b,c,d)
+      if abs(a - b) < 1 and abs(c - d) < 1 and abs(a -c) < 1 and abs(b -d) < 1 and a>10:
+        # print(a,b,c,d)
         square = [i, j, v_lines[i], h_lines[j], a]
         break
 
-  print(square)
+  # print(square)
   h_lines_final = []
   v_lines_final = []
 
@@ -357,18 +356,18 @@ if __name__ == '__main__':
   # v_lines_final.append(v_lines[square[0]+1])
 
   counter = 0
-  for j in range(X.shape[0] - square[0]):
+  for j in range(X.shape[0] - square[0] - 1):
     counter += 1
     m = np.inf
     index = -1
     for i in range(square[0] + 1, X.shape[0]):
       # for j in range(v_lines.shape[0]):
       # print(i, abs(np.linalg.norm(X[square[0]][square[1]] - X[j][square[1]]) - counter*square[-1]))
-      x = abs(abs(v_lines[i][0]*v_lines[i][2] - v_lines[square[0]][0]*v_lines[square[0]][2]) - counter*square[-1])
+      x = abs(abs(v_lines[i][0] - v_lines[square[0]][0]) - counter*square[-1])
       if x < m:
         m = x
         index = i
-    if m < 15:  
+    if m < 10:  
       v_lines_final.append(v_lines[index])
 
   counter = 0
@@ -376,29 +375,30 @@ if __name__ == '__main__':
     counter += 1
     m = np.inf
     index = -1
-    for i in range(square[0] -1, -1, -1):
+    for i in range(square[0] -1, 0, -1):
       # for j in range(v_lines.shape[0]):
       # print(j, abs(np.linalg.norm(X[square[0]][square[1]] - X[i][square[1]]) - counter*square[-1]))
-      x = abs(abs(v_lines[i][0]*v_lines[i][2] - v_lines[square[0]][0]*v_lines[square[0]][2]) - counter*square[-1])
+      x = abs(abs(v_lines[i][0] - v_lines[square[0]][0]) - counter*square[-1])
+      print(x)
       if x < m:
         m = x
         index = i
-    if m < 15:
+    if m < 10:
       v_lines_final.append(v_lines[index])
         
 
   counter = 0
-  for j in range(X.shape[1] - square[1]):
+  for j in range(X.shape[1] - square[1] - 1):
     counter += 1
     m = np.inf
     index = -1
     for i in range(square[1] + 1, X.shape[1]):
       # print(i, abs(np.linalg.norm(X[square[0]][square[1]] - X[square[0]][j]) - counter*square[-1]))
-      x = abs(abs(h_lines[i][0]*h_lines[i][2] - h_lines[square[1]][0]*h_lines[square[1]][2]) - counter*square[-1])
+      x = abs(abs(h_lines[i][0] - h_lines[square[1]][0]) - counter*square[-1])
       if x < m:
         m = x
         index = i
-    if m < 15:
+    if m < 10:
       h_lines_final.append(h_lines[index])
 
   counter = 0
@@ -407,11 +407,11 @@ if __name__ == '__main__':
     m = np.inf
     index = -1
     for i in range(square[1]-1, -1, -1):
-      x = abs(abs(h_lines[i][0]*h_lines[i][2] - h_lines[square[1]][0]*h_lines[square[1]][2]) - counter*square[-1])
+      x = abs(abs(h_lines[i][0] - h_lines[square[1]][0]) - counter*square[-1])
       if x < m:
         m = x
         index = i
-    if m <  15:
+    if m < 10:
       h_lines_final.append(h_lines[index])
 
   h_lines_final = np.array(h_lines_final)
