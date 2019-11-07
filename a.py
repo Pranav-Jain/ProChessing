@@ -114,8 +114,8 @@ def get_edges(img):
   std = np.std(img)
   th1 = min(0,meadian - std)
   th2 = max(255,meadian + std)
-  th1 = 80
-  th2 = 160
+  th1 = 100
+  th2 = 200
 
   # th2, thresh_im = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
   # th1 = th2//3
@@ -236,7 +236,7 @@ def make_lines(h_lines, v_lines, cdst):
 
 if __name__ == '__main__':
 
-  image_name = "chess_1.jfif"
+  image_name = "ch3.jpg"
   img = cv2.imread(image_name)
   # img = unsharp_mask(img, radius=5, amount)
 
@@ -341,7 +341,7 @@ if __name__ == '__main__':
       b = np.linalg.norm(X[i+1][j] - X[i+1][j+1])
       c = np.linalg.norm(X[i][j] - X[i+1][j])
       d = np.linalg.norm(X[i][j+1] - X[i+1][j+1])
-      if abs(a - b) < 1 and abs(c - d) < 1 and abs(a -c) < 1 and abs(b -d) < 1 and a>10:
+      if abs(a - b) < 2 and abs(c - d) < 2 and abs(a -c) < 2 and abs(b -d) < 2 and a>10:
         # print(a,b,c,d)
         square = [i, j, v_lines[i], h_lines[j], a]
         break
@@ -367,7 +367,7 @@ if __name__ == '__main__':
       if x < m:
         m = x
         index = i
-    if m < 10:  
+    if m < 20:  
       v_lines_final.append(v_lines[index])
 
   counter = 0
@@ -375,15 +375,15 @@ if __name__ == '__main__':
     counter += 1
     m = np.inf
     index = -1
-    for i in range(square[0] -1, 0, -1):
+    for i in range(square[0] -1, -1, -1):
       # for j in range(v_lines.shape[0]):
       # print(j, abs(np.linalg.norm(X[square[0]][square[1]] - X[i][square[1]]) - counter*square[-1]))
       x = abs(abs(v_lines[i][0] - v_lines[square[0]][0]) - counter*square[-1])
-      print(x)
+      # print(x)
       if x < m:
         m = x
         index = i
-    if m < 10:
+    if m < 20:
       v_lines_final.append(v_lines[index])
         
 
@@ -398,7 +398,7 @@ if __name__ == '__main__':
       if x < m:
         m = x
         index = i
-    if m < 10:
+    if m < 20:
       h_lines_final.append(h_lines[index])
 
   counter = 0
@@ -411,7 +411,7 @@ if __name__ == '__main__':
       if x < m:
         m = x
         index = i
-    if m < 10:
+    if m < 20:
       h_lines_final.append(h_lines[index])
 
   h_lines_final = np.array(h_lines_final)
