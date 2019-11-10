@@ -190,7 +190,7 @@ def get_lines(lines, cdst):
 
 def make_lines(h_lines, v_lines, cdst):
   
-  print(h_lines.shape, v_lines.shape)
+  # print(h_lines.shape, v_lines.shape)
   for i in range(len(v_lines)):
     # print(i)
 
@@ -236,7 +236,7 @@ def make_lines(h_lines, v_lines, cdst):
 
 if __name__ == '__main__':
 
-  image_name = "chess_1.jfif"
+  image_name = "ch1.jpg"
   img = cv2.imread(image_name)
   # img = unsharp_mask(img, radius=5, amount)
 
@@ -422,13 +422,55 @@ if __name__ == '__main__':
   h_lines = h_lines_final[h_lines_final[:,0].argsort()]
   v_lines = v_lines_final[v_lines_final[:,0].argsort()]
 
+  # print(v_lines.shape)
+  # print(h_lines)
+
+  if h_lines[0][0] > square[-1]:
+    # print(int(np.round(h_lines[0][0]/square[-1])) - 1)
+    while h_lines[0][0] - square[-1] > 0.25*square[-1]:
+      h_lines = np.insert(h_lines, 0, np.array([h_lines[0][0] - square[-1], h_lines[0][1], h_lines[0][2]]), axis=0)
+
+  while h_lines.shape[0] < 9:
+    flag = 0
+    for i in range(h_lines.shape[0] - 1):
+      x = abs(h_lines[i][0] - h_lines[i+1][0])
+      # print(x, square[-1])
+      if(x > 1.5 * square[-1]):
+        flag = 1
+        for j in range(int(np.round(x/square[-1])) - 1):
+          h_lines = np.insert(h_lines, i+j+1, np.array([h_lines[i+j][0]+square[-1], h_lines[i+j][1], h_lines[i+j][2]]), axis=0)
+        break
+    if flag == 0:
+      break
+
+  if v_lines[0][0] > square[-1]:
+    # print(int(np.round(h_lines[0][0]/square[-1])) - 1)
+    while v_lines[0][0] - square[-1] > 0.25*square[-1]:
+      v_lines = np.insert(v_lines, 0, np.array([v_lines[0][0] - square[-1], v_lines[0][1], v_lines[0][2]]), axis=0)
+
+  while v_lines.shape[0] < 9:
+    flag = 0
+    for i in range(v_lines.shape[0] - 1):
+      x = abs(v_lines[i][0] - v_lines[i+1][0])
+      # print(x, square[-1])
+      if(x > 1.5 * square[-1]):
+        flag = 1
+        for j in range(int(np.round(x/square[-1])) - 1):
+          v_lines = np.insert(v_lines, i+j+1, np.array([v_lines[i+j][0]+square[-1], v_lines[i+j][1], v_lines[i+j][2]]), axis=0)
+        break
+    if flag == 0:
+      break
+
   if h_lines.shape[0] > 9:
     h_lines = h_lines[:9]
 
-  print(v_lines)
-  print(h_lines)
+  if v_lines.shape[0] > 9:
+    v_lines = v_lines[-9:]
 
-  make_lines(h_lines_final, v_lines_final, cd2)
+
+  print(h_lines.shape, v_lines.shape)
+
+  make_lines(h_lines, v_lines, cd2)
 
   pts = []
   voting = []
@@ -498,7 +540,7 @@ if __name__ == '__main__':
     X.append(x_temp)
 
   X = np.array(X)
-  print(X)
+  # print(X)
 
   # #     # print(x)
   #     if int(x[0]) not in intersections:
