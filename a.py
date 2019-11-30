@@ -540,7 +540,7 @@ if __name__ == '__main__':
     X.append(x_temp)
 
   X = np.array(X)
-  # print(X)
+  # print(X[0][0])
 
   # #     # print(x)
   #     if int(x[0]) not in intersections:
