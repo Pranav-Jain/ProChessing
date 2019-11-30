@@ -10,11 +10,14 @@ Original file is located at
 import cv2
 import numpy as np
 import math
-from skimage.filters import unsharp_mask
+# from skimage.filters import unsharp_mask
 from PIL import Image, ImageDraw
 from itertools import cycle
 # from google.colab.patches import cv2_imshow
-
+def get_threshold(mid_cropped):
+	gray =cv2.cvtColor(mid_cropped,cv2.COLOR_BGR2GRAY)
+	hist = cv2.calcHist([gray],[0],None,[256],[0,256])
+	# re do the method, get two peaks and compare their deifference
 def draw_chessboard(pixel_width, n = 8):
   """
   Draw an n x n chessboard using PIL.
@@ -102,7 +105,7 @@ def four_point_transform(image, pts):
   warped = cv2.warpPerspective(image, M, (maxWidth, maxHeight))
  
   # return the warped image
-  return warped, min(maxHeight, maxWidth)
+  return warped, min(maxHeight, maxWidth), M
 
 def get_edges(img):
   print(img.shape)
@@ -236,7 +239,8 @@ def make_lines(h_lines, v_lines, cdst):
 
 if __name__ == '__main__':
 
-  image_name = "ch1.jpg"
+  image_name = "chess_1.jfif"
+  # image_name = "ch1.jpg"
   img = cv2.imread(image_name)
   # img = unsharp_mask(img, radius=5, amount)
 
@@ -295,7 +299,7 @@ if __name__ == '__main__':
 
   image = cv2.imread(image_name)
 
-  warped, checkerboard_size = four_point_transform(image, pts)
+  warped, checkerboard_size, M = four_point_transform(image, pts)
   warped = cv2.resize(warped, (checkerboard_size, checkerboard_size))
   cv2.imwrite("warped.jpg", warped)
   warped = cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY)
@@ -513,10 +517,10 @@ if __name__ == '__main__':
 
   image = cv2.imread("warped.jpg")
 
-  warped, checkerboard_size = four_point_transform(image, pts)
-  warped = cv2.resize(warped, (checkerboard_size, checkerboard_size))
+  warped, checkerboard_size, M = four_point_transform(image, pts)
+  # warped = cv2.resize(warped, (checkerboard_size, checkerboard_size))
   cv2.imwrite("warped.jpg", warped)
-  warped = cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY)
+  # warped = cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY)
 
 
   X = []
@@ -541,6 +545,118 @@ if __name__ == '__main__':
 
   X = np.array(X)
   # print(X)
+
+  print("Prateek")
+  print(M)
+  # This is the tranformation matrix that we obtained using the perspective tranform of the given image into warped image
+  # print(X)
+  # print(X.shape)
+  # num_points = X.shape[0]
+  # np.c_[X,np.ones(num_points)]
+  # print(X)
+  print(X.shape)
+  print(warped.shape)
+  warped_gray = cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY)
+  print("compute")
+  counter = 0
+  # print(X[0])
+  points= []
+  for i in range(X.shape[0]):
+  	row =np.c_[X[i],np.ones(X.shape[1])]
+  	tranform_row =np.dot(row,M.T)
+  	print(tranform_row.shape)
+  	for j in range(tranform_row.shape[0]):
+  		tranform_row[j][0] = tranform_row[j][0] / tranform_row[j][2]
+  		tranform_row[j][1] = tranform_row[j][1] / tranform_row[j][2] 
+  	
+  	points.append(tranform_row)
+  	# print(points[-1].shape)
+  print("Hello")
+
+  points = np.array(points)
+  print(points.shape)
+  X = points[:,:,:2]
+  print(X.shape)
+  identified = 0
+  for i in range(X.shape[0]-1):
+  	for j in range(X.shape[1]-1):
+  		# i for vertical lines
+  		# j for horizontal lines
+  		# print(X[i][j])
+  		# point = X[i]
+  		top_left = X[i][j]
+  		bottom_left = X[i][j+1]
+  		top_right = X[i+1][j]
+  		bottom_right = X[i+1][j+1]
+  		# print(top_left)
+  		# print(bottom_left)
+  		# print(top_right)
+  		# print(bottom_right)
+  		c1 = int(np.ceil(max(top_left[0],bottom_left[0])))
+  		c2 = int(min(top_right[0],bottom_right[0]))
+  		c3 = int(np.ceil(max(top_left[1],top_right[1])))
+  		c4 = int(min(bottom_left[1],bottom_right[1]))
+  		# print(c1,c2,c3,c4)
+  		# crop_image = image[c1:c2,c3:c4]
+  		crop_image = warped[c3:c4,c1:c2]
+  		# crop_image = cv2.cvtColor(crop_image, cv2.COLOR_BGR2GRAY)
+  		# ret, otsu = cv2.threshold(crop_image,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+  		mid_cropped = warped[c3+1:c4-1,c1+1:c2-1]
+  		edges = cv2.Canny(mid_cropped,120,300)
+  		box = np.sum(edges)/255
+  		if(box > 1.5*(crop_image.shape[0] + crop_image.shape[1])):
+  			# print(box)
+  			# print(crop_image.shape)
+  			mid_x = crop_image.shape[0]//2
+  			mid_y = crop_image.shape[1]//2
+  			color = "black"
+  			get_threshold(mid_cropped)
+  			if(warped_gray[c3+mid_x][c1+mid_y]>100):
+  				color = "white"
+  			print("Piece present at counter ==> "+str(counter) + " color ==>" + str(warped_gray[c3+mid_x][c1+mid_y]) + str(color))
+  			identified+=1
+  		elif(box > 0.75*(crop_image.shape[0] + crop_image.shape[1])):
+  			# check for each quadrant whether the box is present or not
+  			mid_x = edges.shape[0]//2
+  			mid_y = edges.shape[1]//2
+  			quadrant_1 = edges[:mid_x,:mid_y]
+  			quadrant_2 = edges[mid_x:,:mid_y]
+  			quadrant_3 = edges[:mid_x,mid_y:]
+  			quadrant_4 = edges[mid_x:,mid_y:]
+  			box1 = np.sum(quadrant_1)/255
+  			box2 = np.sum(quadrant_2)/255
+  			box3 = np.sum(quadrant_3)/255
+  			box4 = np.sum(quadrant_4)/255
+  			thr = box/8
+  			empty = 0
+  			if(box1<thr):
+  				empty+=1
+  			if(box2<thr):
+  				empty+=1
+  			if(box3<thr):
+  				empty+=1
+  			if(box4<thr):
+  				empty+=1
+
+  			if(empty>=3):
+  				print("Box disqualified" + str(counter))
+
+  			else:
+  				mid_x = crop_image.shape[0]//2
+	  			mid_y = crop_image.shape[1]//2
+	  			color = "black"
+	  			if(warped_gray[c3+mid_x][c1+mid_y]>100):
+	  				color = "white"
+	  			print("Piece present weakly at counter ==> "+str(counter) + " color ==>" + str(warped_gray[c3+mid_x][c1+mid_y]) + str(color))
+  				identified+=1
+
+
+  		cv2.imwrite("Crops/"+str(counter)+".jpg",edges)
+
+  		counter+=1
+  print(identified)
+  		# print("\n")
+
 
   # #     # print(x)
   #     if int(x[0]) not in intersections:
